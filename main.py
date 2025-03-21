@@ -12,23 +12,26 @@ def execute_agent(prompt: str, files: List[Path]):
         model=model,
         tools=[],
         add_base_tools=True,
-        additional_authorized_imports=["pandas", "matplotlib.pyplot"],
+        additional_authorized_imports=[
+            "pandas",
+            "matplotlib.pyplot",
+            "matplotlib.colors",
+        ],
     )
 
-    augmented_prompt = "\n\n".join(
-        [
-            "You are a machine learning specialist. Heres the list of files available to you:",
-            "\n".join(["- " + str(file) for file in files]),
-            "\n".join(
-                [
-                    "Before you start an analysis always look at:",
-                    "- all the sheets of each files",
-                    "- the first few rows of each data table",
-                ]
-            ),
-            f"Task: {prompt}",
-        ]
-    )
+    augmented_prompt = f"""
+## You are a machine learning specialist focused on data analysis.
+
+You have access to the following files:
+{"\n".join(["- " + str(file) for file in files])}
+
+### Instructions:
+- Always check all sheets of Excel files before selecting relevant data.
+- Always inspect the first few rows of each relevant table to understand its structure.
+- All plots and charts must be **saved to a file** and **not displayed**.
+
+### Task:
+{prompt}"""
 
     agent.run(augmented_prompt)
 
