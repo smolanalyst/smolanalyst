@@ -1,7 +1,7 @@
 import argparse
 from pathlib import Path
 from typing import Optional, List
-from smolagents import CodeAgent, HfApiModel, LogLevel
+from smolagents import CodeAgent, HfApiModel, LogLevel, Tool
 
 
 def parse_arguments():
@@ -49,20 +49,19 @@ def get_model():
     return HfApiModel()
 
 
-def get_augmented_prompt(files: List[Path], prompt: str) -> str:
-    return f"""
-## You are a machine learning specialist focused on data analysis.
+class GetAvailableDataFileList(Tool):
+    name = "get_avaliabe_data_file_list"
+    description = "Return the list of available data files."
+    inputs = {}
+    output_type = "array"
 
-You have access to the following files:
-{"\n".join(["- " + str(file) for file in files])}
+    def __init__(self, files: List[Path]):
+        self.files = files
+        super().__init__()
 
-### Instructions:
-- Always check all sheets of Excel files before selecting relevant data.
-- Always inspect the first few rows of each relevant table to understand its structure.
-- All plots and charts must be **saved to a file** and **not displayed**.
-
-### Task:
-{prompt}"""
+    # TODO: maybe list the sheets from excel files?
+    def forward(self):
+        return self.files
 
 
 def main(
@@ -76,11 +75,9 @@ def main(
     prompt = validate_optional_prompt(prompt)
     verbosity_level = validate_verbosity_level(verbose)
 
-    prompt = get_augmented_prompt(files, prompt)
-
     agent = CodeAgent(
         model=model,
-        tools=[],
+        tools=[GetAvailableDataFileList(files)],
         verbosity_level=verbosity_level,
         additional_authorized_imports=[
             "pandas",
