@@ -7,6 +7,6 @@ Smolanalyst is a CLI tool for analyzing data files using an AI agent that dynami
 - Global CLI installation
 - Allow users to specify custom models via environment variables
 - Leverage agent memory to expose the file list and to provide more contextual instructions?
-- How to restrict Pandas and Matplotlib from writing files outside the working directory and prevent overwriting existing files?
+- Check and improve io_management (check for tempfiles, allow to create subdirectories?)
 - Integrate SciPy for statistical analysis
 - Implement regular testing to continuously evaluate Smolanalyst’s performance 🚀

@@ -1,35 +1,39 @@
+import sys
 import argparse
 from pathlib import Path
 from typing import Optional, List
 from smolagents import CodeAgent, HfApiModel, LogLevel, Tool
+from io_management import handle_io_event
+
+sys.addaudithook(handle_io_event)
 
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="AI agent for data analysis.")
 
-    parser.add_argument("files", nargs="+", help="One or more tabular data files.")
+    parser.add_argument("files", nargs="+", help="One or more data files.")
     parser.add_argument("-p", "--prompt", help="Analysis prompt.")
     parser.add_argument("-v", "--verbose", action="store_true", default=False)
 
     return parser.parse_args()
 
 
-def validate_existing_files(file_paths: List[str]) -> List[Path]:
+def validate_existing_files(files: List[str]) -> List[Path]:
     """Return a list of existing files. TODO: accept glob patterns."""
-    files = []
+    valid_files = []
 
-    for file_path in file_paths:
-        path = Path(file_path)
+    for file in files:
+        path = Path(file)
         if not path.exists():
-            raise FileNotFoundError(f"Error: File not found: {file_path}")
+            raise FileNotFoundError(f"File not found: {file}")
         if not path.is_file():
-            raise FileNotFoundError(f"Error: Not a file: {file_path}")
-        files.append(path)
+            raise FileNotFoundError(f"Not a file: {file}")
+        valid_files.append(file)
 
-    if len(files) == 0:
-        raise ValueError("Error: No files provided.")
+    if len(valid_files) == 0:
+        raise ValueError("No valid file provided.")
 
-    return files
+    return valid_files
 
 
 def validate_optional_prompt(prompt: Optional[str] = None) -> str:
@@ -49,13 +53,13 @@ def get_model():
     return HfApiModel()
 
 
-class GetAvailableDataFileList(Tool):
-    name = "get_avaliabe_data_file_list"
-    description = "Return the list of available data files."
+class GetSourceDataFiles(Tool):
+    name = "get_source_data_files"
+    description = "Return the source data files you must work on."
     inputs = {}
     output_type = "array"
 
-    def __init__(self, files: List[Path]):
+    def __init__(self, files: List[str]):
         self.files = files
         super().__init__()
 
@@ -65,7 +69,7 @@ class GetAvailableDataFileList(Tool):
 
 
 def main(
-    files: List[Path],
+    files: List[str],
     prompt: Optional[str] = None,
     verbose: bool = False,
 ):
@@ -77,7 +81,7 @@ def main(
 
     agent = CodeAgent(
         model=model,
-        tools=[GetAvailableDataFileList(files)],
+        tools=[GetSourceDataFiles(files)],
         verbosity_level=verbosity_level,
         additional_authorized_imports=[
             "pandas",
