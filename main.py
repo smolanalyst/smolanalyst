@@ -81,7 +81,6 @@ def main(
     agent = CodeAgent(
         model=model,
         tools=[],
-        add_base_tools=True,
         verbosity_level=verbosity_level,
         additional_authorized_imports=[
             "pandas",
