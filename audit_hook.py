@@ -1,6 +1,11 @@
 import os
+import sys
 import tempfile
 from pathlib import Path
+
+# global flags.
+IS_HOOK_ENABLED = False
+IS_HOOK_ACTIVE = False
 
 # File operation events to monitor.
 file_operations = {
@@ -57,7 +62,11 @@ def validate_file_is_writable(file):
         raise FileExistsError(f"Can't overwrite existing file ('{file}').")
 
 
-def write_audit_hook(event, args):
+def audit_hook(event, args):
+    # skip is not active.
+    if not IS_HOOK_ACTIVE:
+        return
+
     # First, handle operations that should always be blocked.
     if event in file_modification_operations:
         file = args[0] if args else "."
@@ -86,3 +95,20 @@ def write_audit_hook(event, args):
             write_flags = {os.O_WRONLY, os.O_RDWR, os.O_CREAT, os.O_TRUNC, os.O_APPEND}
             if any(flags & flag for flag in write_flags):
                 validate_file_is_writable(file)
+
+
+def register_hook():
+    global IS_HOOK_ENABLED
+    if not IS_HOOK_ENABLED:
+        sys.addaudithook(audit_hook)
+        IS_HOOK_ENABLED = True
+
+
+def activate_hook():
+    global IS_HOOK_ACTIVE
+    IS_HOOK_ACTIVE = True
+
+
+def deactivate_hook():
+    global IS_HOOK_ACTIVE
+    IS_HOOK_ACTIVE = False

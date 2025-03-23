@@ -2,6 +2,7 @@ import matplotlib
 from pathlib import Path
 from typing import List
 from smolagents import CodeAgent, HfApiModel, LogLevel
+from audit_hook import register_hook, activate_hook, deactivate_hook
 
 
 def validate_existing_files(files: List[str]) -> List[str]:
@@ -88,6 +89,13 @@ def run(
     original_matplot_lib_backed = matplotlib.get_backend()
     matplotlib.use("Agg")
 
+    # the agent run is within an audit hook preneting the agent from
+    # writing files outside the cwd and from overwriting files in the cwd.
+    register_hook()
+    activate_hook()
+
     agent.run(prompt)
 
+    # get back to previous context.
+    deactivate_hook()
     matplotlib.use(original_matplot_lib_backed)

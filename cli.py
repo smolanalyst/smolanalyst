@@ -1,10 +1,6 @@
-import sys
 import argparse
 from typing import Optional
 from smolanalyst import run
-from audit_hooks import write_audit_hook
-
-sys.addaudithook(write_audit_hook)
 
 
 def parse_arguments():
