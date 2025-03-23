@@ -1,11 +1,15 @@
 import sys
 import argparse
+import matplotlib
 from pathlib import Path
 from typing import Optional, List
 from smolagents import CodeAgent, HfApiModel, LogLevel, Tool
 from io_management import handle_io_event
 
 sys.addaudithook(handle_io_event)
+
+# Use non-GUI backend so plt.shot() doesn't interrupt the execution.
+matplotlib.use("Agg")
 
 
 def parse_arguments():
