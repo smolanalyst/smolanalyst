@@ -56,7 +56,7 @@ def validate_file_is_writable(file):
         raise FileExistsError(f"Can't overwrite existing file ('{file}').")
 
 
-def handle_io_event(event, args):
+def write_audit_hook(event, args):
     # First, handle operations that should always be blocked.
     if event in file_modification_operations:
         file = args[0] if args else "."
