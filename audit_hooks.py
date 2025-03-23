@@ -22,13 +22,15 @@ file_modification_operations = {
     "os.link",  # Create hard link.
     "os.chmod",  # Change permissions.
     "os.chown",  # Change ownership.
-    # "os.remove",  # File removal (alias for unlink) - apparently required for tempfile.
+    "os.remove",  # File removal (alias for unlink) - apparently required for tempfile.
 }
+
+abs_cwd = os.path.abspath(os.getcwd())
+abs_tmp = os.path.abspath(tempfile.gettempdir())
 
 
 # Is the given file within the tempdir.
 def is_file_in_tmp(file):
-    abs_tmp = tempfile.gettempdir()
     abs_file = os.path.abspath(file)
     common_prefix = os.path.commonpath([abs_tmp, abs_file])
     return common_prefix == abs_tmp
@@ -36,7 +38,6 @@ def is_file_in_tmp(file):
 
 # Is the given file within the current working directory.
 def is_file_in_cwd(file):
-    abs_cwd = os.path.abspath(os.getcwd())
     abs_file = os.path.abspath(file)
     common_prefix = os.path.commonpath([abs_cwd, abs_file])
     return common_prefix == abs_cwd
@@ -60,9 +61,12 @@ def write_audit_hook(event, args):
     # First, handle operations that should always be blocked.
     if event in file_modification_operations:
         file = args[0] if args else "."
-        raise PermissionError(
-            f"File modification operation '{event}' on '{file}' is not permitted."
-        )
+        if event == "os.remove" and is_file_in_tmp(file):
+            return
+        else:
+            raise PermissionError(
+                f"File modification operation '{event}' on '{file}' is not permitted."
+            )
 
     # Then handle write operations.
     elif event in file_operations:
