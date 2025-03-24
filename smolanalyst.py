@@ -1,6 +1,7 @@
+import os
 from pathlib import Path
-from typing import List
-from smolagents import CodeAgent, HfApiModel, LogLevel
+from typing import List, Optional
+from smolagents import CodeAgent, HfApiModel, LiteLLMModel, LogLevel
 from contexts import RestrictedWriteContext, MatplotlibServerContext
 
 
@@ -24,9 +25,32 @@ def validate_verbosity_level(verbose: bool) -> LogLevel:
     return LogLevel.DEBUG if verbose else LogLevel.INFO
 
 
-def get_model():
-    # TODO: select model according to environment variables.
-    return HfApiModel()
+def get_model(
+    model_type: Optional[str] = None,
+    model_id: Optional[str] = None,
+    model_api_key: Optional[str] = None,
+    model_api_base: Optional[str] = None,
+):
+    if not model_type:
+        model_type = os.environ.get("SMOLANALYST_MODEL_TYPE", "hfapi")
+
+    if not model_id:
+        model_id = os.environ.get("SMOLANALYST_MODEL_ID")
+
+    if not model_api_key:
+        model_api_key = os.environ.get("SMOLANALYST_MODEL_API_KEY")
+
+    if not model_api_base:
+        model_api_base = os.environ.get("SMOLANALYST_MODEL_API_BASE")
+
+    if model_type == "hfapi":
+        return HfApiModel(model_id=model_id, token=model_api_key)
+    elif model_type == "litellm":
+        return LiteLLMModel(
+            model_id=model_id, api_key=model_api_key, api_base=model_api_base
+        )
+    else:
+        raise ValueError(f"Invalid model type: {model_type}")
 
 
 def get_prompt(task: str, files: List[str]) -> str:
@@ -65,12 +89,16 @@ def run(
     task: str,
     files: List[str],
     verbose: bool = False,
+    model_type: Optional[str] = None,
+    model_id: Optional[str] = None,
+    model_api_key: Optional[str] = None,
+    model_api_base: Optional[str] = None,
 ):
     """Execute the AI agent on the given task with the given options."""
     files = validate_existing_files(files)
     verbosity_level = validate_verbosity_level(verbose)
 
-    model = get_model()
+    model = get_model(model_type, model_id, model_api_key, model_api_base)
     prompt = get_prompt(task, files)
 
     agent = CodeAgent(
