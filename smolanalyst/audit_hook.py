@@ -35,21 +35,24 @@ abs_tmp = os.path.abspath(tempfile.gettempdir())
 
 
 # Is the given file within the tempdir.
-def is_file_in_tmp(file):
+def is_file_in_tmp(file: str) -> bool:
     abs_file = os.path.abspath(file)
     common_prefix = os.path.commonpath([abs_tmp, abs_file])
     return common_prefix == abs_tmp
 
 
 # Is the given file within the current working directory.
-def is_file_in_cwd(file):
+def is_file_in_cwd(file: str) -> bool:
     abs_file = os.path.abspath(file)
     common_prefix = os.path.commonpath([abs_cwd, abs_file])
     return common_prefix == abs_cwd
 
 
 # Raise exception if the given file is not in tempdir, not in cwd or is an existing file.
-def validate_file_is_writable(file):
+def validate_file_is_writable(file: str):
+    if not isinstance(file, str):
+        return
+
     if is_file_in_tmp(file):
         return
 
