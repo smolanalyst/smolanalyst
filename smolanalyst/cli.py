@@ -1,6 +1,6 @@
 import argparse
 from typing import Optional
-from smolanalyst import run
+from agent import run
 
 
 def parse_arguments():

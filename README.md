@@ -1,12 +1,10 @@
 # Smolanalyst
 
-Smolanalyst is a CLI tool for analyzing data files using an AI agent that dynamically generates and executes Python snippets. It is built on [Smolagent](https://github.com/huggingface/smolagents) and supports Pandas and Matplotlib for data manipulation and visualization.
+Smolanalyst is an AI agent that analyzes data files by generating and executing Python snippets. Built on Hugging Face's [Smolagent](https://github.com/huggingface/smolagents), it primarily runs through a CLI tool but can be integrated into other environments.
 
 ## TODO
 
 - Global CLI installation and package distribution
-- Allow users to specify custom models via environment variables
-- Only run the code interpreter within the contexts, not the whole agent run?
-- Find a more elegant way to augment the task as a prompt
+- Improve model selection through environment variables
 - Integrate SciPy for statistical analysis
 - Implement regular testing to continuously evaluate Smolanalyst’s performance 🚀
