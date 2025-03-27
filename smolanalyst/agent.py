@@ -4,6 +4,18 @@ from typing import List, Optional
 from smolagents import CodeAgent, HfApiModel, LiteLLMModel, LogLevel
 from execution_context import ExecutionContext
 
+EXTRA_INSTRUCTIONS = f"""
+### Guidelines for Data Analysis:
+- **No Internet Access:** You cannot fetch external data. Work only with the provided files.
+- **Inspect Data:** You can preview a few rows before proceeding with the analysis.
+- **Multiple Sheets:** If dealing with Excel files, check for multiple sheets before assuming the structure.
+- **File Saving:**
+  - Do not save any files unless explicitly instructed.
+  - If saving fails, append a timestamp to the filename and retry.
+- **Chart Handling:** Matplotlib runs in headless mode, so always save charts to files instead of displaying them.
+- **Missing Data:** If no suitable data is available for the task, clearly state it and stop processing.
+""".strip()
+
 
 def validate_existing_files(files: List[str]) -> List[str]:
     """Return a list of existing files. TODO: accept glob patterns."""
@@ -60,26 +72,11 @@ def get_prompt(task: str, files: List[str]) -> str:
 
     pieces.append(f"Task: {task}")
 
-    pieces.append(
-        f"""
-### Guidelines for Data Analysis:  
-- **No Internet Access:** You cannot fetch external data. Work only with the provided files.  
-- **Inspect Data:** You can preview a few rows before proceeding with the analysis.  
-- **Multiple Sheets:** If dealing with Excel files, check for multiple sheets before assuming the structure.  
-- **File Saving:**  
-  - Do not save any files unless explicitly instructed.  
-  - If saving fails, append a timestamp to the filename and retry.  
-- **Chart Handling:** Matplotlib runs in headless mode, so always save charts to files instead of displaying them.  
-- **Missing Data:** If no suitable data is available for the task, clearly state it and stop processing.  
-        """.strip()
-    )
+    pieces.append(EXTRA_INSTRUCTIONS)
 
     if len(files) > 0:
         pieces.append(
-            f"""
-### Available Source Files:
-{"\n".join([f"- {file}" for file in files])}
-            """.strip()
+            f"### Available Source Files: {"\n" + "\n".join([f"- {file}" for file in files])}"
         )
 
     return "\n\n".join(pieces)
