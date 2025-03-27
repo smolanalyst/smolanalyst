@@ -113,5 +113,5 @@ def run(
     )
 
     # the agent run within an execution context monitoring file writes and with matplotlib in server mode.
-    with ExecutionContext(os.getcwd()).secure_context():
+    with ExecutionContext.cwd().secure_context():
         agent.run(prompt)

@@ -8,6 +8,15 @@ import functools
 
 
 class ExecutionContext:
+    @classmethod
+    def cwd(cls):
+        """
+        Create an ExecutionContext with the current working directory as the secure directory.
+
+        :return: ExecutionContext object
+        """
+        return cls(os.getcwd())
+
     def __init__(self, secure_directory):
         """
         Initialize the secure pandas and matplotlib wrapper.
