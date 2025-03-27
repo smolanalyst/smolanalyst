@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from typing import List, Optional
 from smolagents import CodeAgent, HfApiModel, LiteLLMModel, LogLevel
-from contexts import RestrictedWriteContext, MatplotlibServerContext
+from execution_context import ExecutionContext
 
 
 def validate_existing_files(files: List[str]) -> List[str]:
@@ -112,9 +112,6 @@ def run(
         ],
     )
 
-    # the agent run is within an audit hook preneting the agent from
-    # writing files outside the cwd and from overwriting files in the cwd.
-    # Also matplotlib is temporarily switched to server backen so plt.show()
-    # does not interrupt the agent execution.
-    with RestrictedWriteContext(), MatplotlibServerContext():
+    # the agent run within an execution context monitoring file writes and with matplotlib in server mode.
+    with ExecutionContext(os.getcwd()).secure_context():
         agent.run(prompt)
