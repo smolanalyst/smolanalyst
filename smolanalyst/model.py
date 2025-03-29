@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import TypedDict
 from smolagents import HfApiModel, LiteLLMModel
 
 
@@ -7,20 +8,20 @@ class ModelType(Enum):
     LITELLM = 1
 
 
-class ModelFactory:
-    def __init__(self, type: str, model_id: str, api_key: str, api_base: str):
-        self.type = ModelType[type.upper()]
-        self.model_id = model_id
-        self.api_key = api_key
-        self.api_base = api_base
+class ModelConfig(TypedDict):
+    type: ModelType
+    model_id: str
+    api_key: str
+    api_base: str
 
-    def __call__(self):
-        match self.type:
-            case ModelType.HFAPI:
-                return HfApiModel(model_id=self.model_id, token=self.api_key)
-            case ModelType.LITELLM:
-                return LiteLLMModel(
-                    model_id=self.model_id,
-                    api_key=self.api_key,
-                    api_base=self.api_base,
-                )
+
+def model_factory(config: ModelConfig):
+    match config["type"]:
+        case ModelType.HFAPI:
+            return HfApiModel(model_id=config["model_id"], token=config["api_key"])
+        case ModelType.LITELLM:
+            return LiteLLMModel(
+                model_id=config["model_id"],
+                api_key=config["api_key"],
+                api_base=config["api_base"],
+            )

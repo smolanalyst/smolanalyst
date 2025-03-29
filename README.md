@@ -5,7 +5,7 @@ Smolanalyst is an AI agent that analyzes data files by generating and executing 
 ## TODO
 
 - Global CLI installation and package distribution
-- Add a command to write model configuration in user home instead of using environment variables
+- Improve CLI configuration prompting and look
 - Implement the actual write control within the secure context
 - Integrate SciPy for statistical analysis
 - Implement regular testing to continuously evaluate Smolanalyst’s performance 🚀
