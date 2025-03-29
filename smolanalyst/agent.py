@@ -1,10 +1,13 @@
 import os
 from pathlib import Path
+from string import Template
 from typing import List, Optional
 from smolagents import CodeAgent, HfApiModel, LiteLLMModel, LogLevel
 from execution_context import ExecutionContext
 
-EXTRA_INSTRUCTIONS = f"""
+EXTRA_INSTRUCTIONS = """
+Task: $task
+
 ### Guidelines for Data Analysis:
 - **No Internet Access:** You cannot fetch external data. Work only with the provided files.
 - **Inspect Data:** You can preview a few rows before proceeding with the analysis.
@@ -14,6 +17,13 @@ EXTRA_INSTRUCTIONS = f"""
   - If saving fails, append a timestamp to the filename and retry.
 - **Chart Handling:** Matplotlib runs in headless mode, so always save charts to files instead of displaying them.
 - **Missing Data:** If no suitable data is available for the task, clearly state it and stop processing.
+""".strip()
+
+EXTRA_INSTRUCTIONS_WITH_SOURCE_FILES = f"""
+{EXTRA_INSTRUCTIONS}
+
+### Available Source Files:
+$files
 """.strip()
 
 
@@ -68,18 +78,12 @@ def get_model(
 def get_prompt(task: str, files: List[str]) -> str:
     """Augment the task to get a more precise prompt"""
 
-    pieces = []
+    if len(files) == 0:
+        return Template(EXTRA_INSTRUCTIONS).substitute(task=task)
 
-    pieces.append(f"Task: {task}")
-
-    pieces.append(EXTRA_INSTRUCTIONS)
-
-    if len(files) > 0:
-        pieces.append(
-            f"### Available Source Files: {"\n" + "\n".join([f"- {file}" for file in files])}"
-        )
-
-    return "\n\n".join(pieces)
+    return Template(EXTRA_INSTRUCTIONS_WITH_SOURCE_FILES).substitute(
+        task=task, files="\n".join("-" + file for file in files)
+    )
 
 
 def run(
