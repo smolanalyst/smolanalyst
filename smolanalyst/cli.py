@@ -1,19 +1,17 @@
+import os
 import argparse
 from typing import Optional
-from agent import run
+from smolagents import LogLevel
+from agent import Agent
+from model import ModelFactory
 
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="AI agent for data analysis.")
 
+    parser.add_argument("files", nargs="*", help="One or more data files.")
     parser.add_argument("-t", "--task", help="Task to perform.")
     parser.add_argument("-v", "--verbose", action="store_true", default=False)
-    parser.add_argument("-mt", "--model_type", help="Type of model to use.")
-    parser.add_argument("-mi", "--model_id", help="Model ID.")
-    parser.add_argument("-mk", "--model_api_key", help="Model API key.")
-    parser.add_argument("-mb", "--model_api_base", help="Model API base URL.")
-
-    parser.add_argument("files", nargs="*", help="One or more data files.")
 
     return parser.parse_args()
 
@@ -30,12 +28,15 @@ if __name__ == "__main__":
 
     task = prompt_task(args.task)
 
-    run(
-        task,
-        args.files,
-        args.verbose,
-        args.model_type,
-        args.model_id,
-        args.model_api_key,
-        args.model_api_base,
+    factory = ModelFactory(
+        os.environ.get("SMOLANALYST_MODEL_TYPE", "HFAPI"),
+        os.environ.get("SMOLANALYST_MODEL_ID"),
+        os.environ.get("SMOLANALYST_MODEL_API_KEY"),
+        os.environ.get("SMOLANALYST_MODEL_API_BASE"),
     )
+
+    verbosity_level = LogLevel.DEBUG if args.verbose else LogLevel.INFO
+
+    agent = Agent(factory(), verbosity_level)
+
+    agent.run(task, args.files)
