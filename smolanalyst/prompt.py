@@ -33,5 +33,5 @@ class Prompt:
             return Template(EXTRA_INSTRUCTIONS).substitute(task=self.task)
 
         return Template(EXTRA_INSTRUCTIONS_WITH_SOURCE_FILES).substitute(
-            task=self.task, files="\n".join("-" + file for file in self.files)
+            task=self.task, files="\n".join("- " + file for file in self.files)
         )
