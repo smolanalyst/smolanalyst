@@ -2,7 +2,7 @@
 
 Smolanalyst is an AI agent that analyzes data files by generating and executing Python snippets. Built on [Hugging Face](https://huggingface.co/)'s [Smolagent](https://github.com/huggingface/smolagents), it primarily runs through a CLI tool but can be integrated into other environments.
 
-## CLI Usage
+## CLI Configuration
 
 To configure Smolanalyst, run the following command:
 
@@ -60,9 +60,31 @@ Run a model locally using [Ollama](https://ollama.com/):
 }
 ```
 
+## Running an Analysis
+
+To start an analysis, run the following command:
+
+```
+python smolanalyst/cli.py run [files]
+```
+
+- `[files]` is a list of zero or more file paths. These files will be explicitly referenced in Smolanalyst's prompt.
+- Use the `-t` option to specify a task directly. If omitted, Smolanalyst will prompt you to describe the task.
+- Add `-v` to enable verbose output, which includes the model's internal reasoning (thoughts).
+
+**Execution Environment Restrictions:**
+
+- Smolanalyst is currently restricted to importing only `pandas` and `matplotlib`.
+- It can write files using these libraries, but only within the current working directory.
+- Overwriting existing files is not allowed.
+
 ## TODO
 
 - Global CLI installation and package distribution
 - Improve CLI configuration prompting and look
 - Integrate SciPy for statistical analysis
 - Implement regular testing to continuously evaluate Smolanalyst’s performance 🚀
+
+```
+
+```
