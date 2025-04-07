@@ -4,8 +4,7 @@ from prompt import Prompt
 
 ADDITIONAL_AUTHORIZED_IMPORTS = [
     "pandas",
-    "matplotlib.pyplot",
-    "matplotlib.colors",
+    "matplotlib",
 ]
 
 
