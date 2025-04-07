@@ -33,6 +33,7 @@ class Agent:
         with self.context:
             self.agent.run(prompt)
 
-    def more(self, prompt: str):
+    def more(self, prompt: str, files: List[str] = []):
+        """Keep executing the agent with a new prompt."""
         with self.context:
             self.agent.run(prompt, reset=False)
