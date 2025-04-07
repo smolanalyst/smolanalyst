@@ -134,13 +134,27 @@ def run(args):
         task = input("What analysis would you like to perform?\n> ")
 
     # execution context is in cwd.
-    context = ExecutionContext.cwd().secure_context()
+    context = ExecutionContext.cwd()
 
     # format the verbosity level.
     verbosity_level = LogLevel.DEBUG if args.verbose else LogLevel.INFO
 
+    # create the agent.
+    agent = Agent(model, context, verbosity_level)
+
     # run the agent.
-    Agent(model, context, verbosity_level).run(task, files)
+    agent.run(task, files)
+
+    # loop until the user ends chatting with the agent.
+    while True:
+        # prompt user for more.
+        more = input("Is this ok? (q to quit)\n> ")
+
+        if more.lower() == "q":
+            break
+
+        # run the agent with the new prompt.
+        agent.more(more)
 
 
 if __name__ == "__main__":

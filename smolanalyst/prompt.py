@@ -9,9 +9,10 @@ Task: $task
 - **Inspect Data:** You can preview a few rows before proceeding with the analysis.
 - **Multiple Sheets:** If dealing with Excel files, check for multiple sheets before assuming the structure.
 - **File Saving:**
-- Do not save any files unless explicitly instructed.
-- If saving fails, append a timestamp to the filename and retry.
-- **Chart Handling:** Matplotlib runs in headless mode, so always save charts to files instead of displaying them.
+    - Do not save any files unless explicitly instructed.
+    - If file writing fails because it alread exists, you are allowed to append a timestamp to the filename and retry.
+    - If file writing is not allowed, clearly state it and stop processing.
+- **Chart Handling:** Matplotlib runs in headless mode so displaying charts is useless.
 - **Missing Data:** If no suitable data is available for the task, clearly state it and stop processing.
 """.strip()
 

@@ -1,10 +1,9 @@
 import os
-import contextlib
-import pandas as pd
-import matplotlib.pyplot as plt
-import matplotlib
 import copy
 import functools
+import pandas as pd
+import matplotlib
+import matplotlib.pyplot
 
 
 class ExecutionContext:
@@ -27,7 +26,7 @@ class ExecutionContext:
 
         # Store original methods for restoration.
         self.original_methods = {
-            "dataframe": {
+            "pd.DataFrame": {
                 "to_json": pd.DataFrame.to_json,
                 "to_csv": pd.DataFrame.to_csv,
                 "to_excel": pd.DataFrame.to_excel,
@@ -40,14 +39,14 @@ class ExecutionContext:
                 "to_stata": pd.DataFrame.to_stata,
                 "to_clipboard": pd.DataFrame.to_clipboard,
             },
-            "series": {
+            "pd.Series": {
                 "to_csv": pd.Series.to_csv,
                 "to_pickle": pd.Series.to_pickle,
                 "to_json": pd.Series.to_json,
                 "to_excel": pd.Series.to_excel,
             },
-            "matplotlib": {
-                "savefig": plt.savefig,
+            "matplotlib.pyplot": {
+                "savefig": matplotlib.pyplot.savefig,
             },
         }
 
@@ -100,40 +99,39 @@ class ExecutionContext:
     def _secure_matplotlib_write_method(self, matplotlib_write_method):
         return self._secure_write_method(matplotlib_write_method)
 
-    @contextlib.contextmanager
-    def secure_context(self):
-        """
-        Context manager to apply and then revert security patches.
+    def __enter__(self):
+        # Monkey patch allowed modules.
+        for name, method in self.original_methods["pd.DataFrame"].items():
+            setattr(pd.DataFrame, name, self._secure_dataframe_write_method(method))
 
-        Usage:
-        with secure_context():
-            # Your code here
-        """
-        try:
-            # Store original matplotlib rcParams for restoration.
-            self.original_rcparams = copy.deepcopy(matplotlib.rcParams)
+        for name, method in self.original_methods["pd.Series"].items():
+            setattr(pd.Series, name, self._secure_series_write_method(method))
 
-            # Monkey patch allowed modules.
-            for name, method in self.original_methods["dataframe"].items():
-                setattr(pd.DataFrame, name, self._secure_dataframe_write_method(method))
+        for name, method in self.original_methods["matplotlib.pyplot"].items():
+            setattr(
+                matplotlib.pyplot, name, self._secure_matplotlib_write_method(method)
+            )
 
-            for name, method in self.original_methods["series"].items():
-                setattr(pd.Series, name, self._secure_series_write_method(method))
+        # Store original matplotlib rcParams for restoration.
+        self.original_rcparams = copy.deepcopy(matplotlib.rcParams)
 
-            for name, method in self.original_methods["matplotlib"].items():
-                setattr(matplotlib, name, self._secure_matplotlib_write_method(method))
+        # Set matplotlib to headless mode.
+        matplotlib.rcParams["backend"] = "Agg"
 
-            yield
-        finally:
-            # Restore original matplotlib settings.
-            matplotlib.rcParams.update(self.original_rcparams)
+    def __exit__(self, type, value, traceback):
+        # Restore original methods.
+        for name in self.original_methods["pd.DataFrame"].keys():
+            setattr(pd.DataFrame, name, self.original_methods["pd.DataFrame"][name])
 
-            # Restore original methods.
-            for name in self.original_methods["dataframe"].keys():
-                setattr(pd.DataFrame, name, self.original_methods["dataframe"][name])
+        for name in self.original_methods["pd.Series"].keys():
+            setattr(pd.Series, name, self.original_methods["pd.Series"][name])
 
-            for name in self.original_methods["series"].keys():
-                setattr(pd.Series, name, self.original_methods["series"][name])
+        for name in self.original_methods["matplotlib.pyplot"].keys():
+            setattr(
+                matplotlib.pyplot,
+                name,
+                self.original_methods["matplotlib.pyplot"][name],
+            )
 
-            for name in self.original_methods["matplotlib"].keys():
-                setattr(matplotlib, name, self.original_methods["matplotlib"][name])
+        # Restore original matplotlib settings.
+        matplotlib.rcParams.update(self.original_rcparams)

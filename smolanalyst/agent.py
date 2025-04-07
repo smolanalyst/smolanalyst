@@ -32,3 +32,7 @@ class Agent:
         # the agent run within an execution context monitoring file writes and with matplotlib in server mode.
         with self.context:
             self.agent.run(prompt)
+
+    def more(self, prompt: str):
+        with self.context:
+            self.agent.run(prompt, reset=False)
