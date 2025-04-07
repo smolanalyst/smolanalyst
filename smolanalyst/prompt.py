@@ -2,7 +2,7 @@ from typing import List
 from string import Template
 
 EXTRA_INSTRUCTIONS = """
-Task: `$task`
+Task: $task
 
 ---
 
