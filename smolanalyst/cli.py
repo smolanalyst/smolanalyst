@@ -7,6 +7,7 @@ from pathlib import Path
 from smolagents import LogLevel
 from agent import Agent
 from model import ModelType, ModelConfig, model_factory
+from context import ExecutionContext
 
 APP_NAME = "smolanalyst"
 CONFIG_DIR = platformdirs.user_config_dir(APP_NAME)
@@ -123,7 +124,7 @@ def run(args):
     # create a model from the configuration.
     model = model_factory(config)
 
-    # Validate the files exists.
+    # validate the files exists.
     files = validate_existing_files(args.files)
 
     # prompt user if no task given.
@@ -132,11 +133,14 @@ def run(args):
     if not task:
         task = input("What analysis would you like to perform?\n> ")
 
+    # execution context is in cwd.
+    context = ExecutionContext.cwd().secure_context()
+
     # format the verbosity level.
     verbosity_level = LogLevel.DEBUG if args.verbose else LogLevel.INFO
 
     # run the agent.
-    Agent(model, verbosity_level).run(task, files)
+    Agent(model, context, verbosity_level).run(task, files)
 
 
 if __name__ == "__main__":
