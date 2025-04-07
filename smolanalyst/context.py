@@ -1,5 +1,6 @@
 import os
 import copy
+import inspect
 import functools
 import pandas as pd
 import matplotlib
@@ -25,29 +26,29 @@ class ExecutionContext:
         self.dir = os.path.abspath(secure_directory)
 
         # Store original methods for restoration.
-        self.original_methods = {
-            "pd.DataFrame": {
-                "to_json": pd.DataFrame.to_json,
-                "to_csv": pd.DataFrame.to_csv,
-                "to_excel": pd.DataFrame.to_excel,
-                "to_sql": pd.DataFrame.to_sql,
-                "to_hdf": pd.DataFrame.to_hdf,
-                "to_orc": pd.DataFrame.to_orc,
-                "to_pickle": pd.DataFrame.to_pickle,
-                "to_feather": pd.DataFrame.to_feather,
-                "to_parquet": pd.DataFrame.to_parquet,
-                "to_stata": pd.DataFrame.to_stata,
-                "to_clipboard": pd.DataFrame.to_clipboard,
-            },
-            "pd.Series": {
-                "to_csv": pd.Series.to_csv,
-                "to_pickle": pd.Series.to_pickle,
-                "to_json": pd.Series.to_json,
-                "to_excel": pd.Series.to_excel,
-            },
-            "matplotlib.pyplot": {
-                "savefig": matplotlib.pyplot.savefig,
-            },
+        self.df = {
+            "to_csv": [pd.DataFrame.to_csv, True, "path_or_buf"],
+            "to_json": [pd.DataFrame.to_json, True, "path_or_buf"],
+            "to_excel": [pd.DataFrame.to_excel, True, "excel_writer"],
+            "to_sql": [pd.DataFrame.to_sql, False, None],
+            "to_hdf": [pd.DataFrame.to_hdf, False, None],
+            "to_orc": [pd.DataFrame.to_orc, False, None],
+            "to_pickle": [pd.DataFrame.to_pickle, False, None],
+            "to_feather": [pd.DataFrame.to_feather, False, None],
+            "to_parquet": [pd.DataFrame.to_parquet, False, None],
+            "to_stata": [pd.DataFrame.to_stata, False, None],
+            "to_clipboard": [pd.DataFrame.to_clipboard, False, None],
+        }
+
+        self.series = {
+            "to_csv": [pd.Series.to_csv, True, "path_or_buf"],
+            "to_json": [pd.Series.to_json, True, "path_or_buf"],
+            "to_excel": [pd.Series.to_excel, True, "excel_writer"],
+            "to_pickle": [pd.Series.to_pickle, False, None],
+        }
+
+        self.matplotlib = {
+            "savefig": [matplotlib.pyplot.savefig, True, ""],
         }
 
     def _secure_path(self, filepath):
@@ -60,7 +61,7 @@ class ExecutionContext:
         """
         # Handle None or non-string inputs.
         if not filepath or not isinstance(filepath, str):
-            return filepath
+            raise ValueError(f"File writting failed. Invalid path: {filepath}")
 
         abs_path = os.path.abspath(filepath)
 
@@ -68,7 +69,7 @@ class ExecutionContext:
         if not abs_path.startswith(self.dir):
             raise ValueError(f"File writting not allowed outside {self.dir}")
 
-        # Ensure this is not the pathof an existing file.
+        # Ensure this is not the path  of an existing file.
         if os.path.exists(abs_path):
             raise ValueError(
                 f"File {abs_path} already exists. Overwriting is not allowed."
@@ -76,7 +77,7 @@ class ExecutionContext:
 
         return abs_path
 
-    def _secure_write_method(self, write_method):
+    def _secure_write_method(self, write_method, arg_name):
         """
         Right now just prevent file writing.
 
@@ -86,31 +87,50 @@ class ExecutionContext:
 
         @functools.wraps(write_method)
         def secure_method(*args, **kwargs):
-            raise ValueError("File writing is not allowed")
+            if arg_name == "":
+                args_list = list(args)
+                args_list[0] = self._secure_path(args_list[0])
+                return write_method(*args_list, **kwargs)
+            else:
+                sig = inspect.signature(write_method)
+                bound_arguments = sig.bind(*args, **kwargs)
+                bound_arguments.apply_defaults()
+                filepath = bound_arguments.arguments.get(arg_name)
+                bound_arguments.arguments[arg_name] = self._secure_path(filepath)
+                return write_method(*bound_arguments.args, **bound_arguments.kwargs)
 
         return secure_method
 
-    def _secure_dataframe_write_method(self, dataframe_write_method):
-        return self._secure_write_method(dataframe_write_method)
+    def _unallowed_write_method(self, write_method):
+        @functools.wraps(write_method)
+        def unallowed_method(*args, **kwargs):
+            raise ValueError(
+                f"File writing method {write_method.__name__} not allowed."
+            )
 
-    def _secure_series_write_method(self, series_write_method):
-        return self._secure_write_method(series_write_method)
+        return unallowed_method
 
-    def _secure_matplotlib_write_method(self, matplotlib_write_method):
-        return self._secure_write_method(matplotlib_write_method)
+    def patch(self, module, name, values):
+        [method, allowed, arg_name] = values
+        new_method = (
+            self._secure_write_method(method, arg_name)
+            if allowed
+            else self._unallowed_write_method(method)
+        )
+        setattr(module, name, new_method)
 
     def __enter__(self):
-        # Monkey patch allowed modules.
-        for name, method in self.original_methods["pd.DataFrame"].items():
-            setattr(pd.DataFrame, name, self._secure_dataframe_write_method(method))
+        # Monkey patch pandas dataframe methods.
+        for name, values in self.df.items():
+            self.patch(pd.DataFrame, name, values)
 
-        for name, method in self.original_methods["pd.Series"].items():
-            setattr(pd.Series, name, self._secure_series_write_method(method))
+        # Monkey patch pandas series methods.
+        for name, values in self.series.items():
+            self.patch(pd.Series, name, values)
 
-        for name, method in self.original_methods["matplotlib.pyplot"].items():
-            setattr(
-                matplotlib.pyplot, name, self._secure_matplotlib_write_method(method)
-            )
+        # Monkey patch matplotlib methods.
+        for name, values in self.matplotlib.items():
+            self.patch(matplotlib.pyplot, name, values)
 
         # Store original matplotlib rcParams for restoration.
         self.original_rcparams = copy.deepcopy(matplotlib.rcParams)
@@ -120,18 +140,14 @@ class ExecutionContext:
 
     def __exit__(self, type, value, traceback):
         # Restore original methods.
-        for name in self.original_methods["pd.DataFrame"].keys():
-            setattr(pd.DataFrame, name, self.original_methods["pd.DataFrame"][name])
+        for name, values in self.df.items():
+            setattr(pd.DataFrame, name, values[0])
 
-        for name in self.original_methods["pd.Series"].keys():
-            setattr(pd.Series, name, self.original_methods["pd.Series"][name])
+        for name, values in self.series.items():
+            setattr(pd.Series, name, values[0])
 
-        for name in self.original_methods["matplotlib.pyplot"].keys():
-            setattr(
-                matplotlib.pyplot,
-                name,
-                self.original_methods["matplotlib.pyplot"][name],
-            )
+        for name, values in self.matplotlib.items():
+            setattr(matplotlib.pyplot, name, values[0])
 
         # Restore original matplotlib settings.
         matplotlib.rcParams.update(self.original_rcparams)
