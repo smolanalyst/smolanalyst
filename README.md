@@ -80,6 +80,7 @@ python smolanalyst/cli.py run [files]
 
 ## TODO
 
+- Remove the monkey patching of pandas and use a local docker enviroment
 - Global CLI installation and package distribution
 - Improve CLI configuration prompting and look
 - Integrate SciPy for statistical analysis
