@@ -4,7 +4,7 @@ SmolAnalyst is an AI agent that analyzes data files by generating and executing 
 
 ## What is SmolAnalyst?
 
-SmolAnalyst is a tool that allows you to analyze data using natural language instructions. It uses Hugging Face's Smolagent to generate Python code that processes your data files within a secure containerized environment. The tool handles the execution environment, file management, and security aspects so you can focus on your analysis tasks.
+SmolAnalyst is a tool that allows you to analyze data using natural language instructions. It uses Hugging Face's Smolagent to generate Python code that processes your data files within a secure, containerized environment. For security and isolation, SmolAnalyst relies on [Podman](https://podman.io/) to run all analysis tasks inside containers—so you’ll need to have Podman installed on your system. Smolanalyst handles the execution environment, file management, and security aspects so you can focus on your analysis tasks.
 
 ## Installation
 
