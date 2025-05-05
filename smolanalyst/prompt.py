@@ -1,4 +1,3 @@
-from typing import List
 from string import Template
 
 EXTRA_INSTRUCTIONS = """
@@ -6,27 +5,22 @@ Task: $task
 
 ---
 
-### Guidelines for Data Analysis
+## Guidelines for Data Analysis
 
-- **No Internet Access:**  
-  Do **not** attempt to download or fetch external resources. You must work **only** with the provided local files.
+### Data Source Limitations
+- **No Internet Access**: Work exclusively with the provided source files
+- **Source File Path**: The provided source file path is absolute
 
-- **Inspect the Data First:**  
-  Before starting any analysis, preview a few rows to understand the structure and contents.
+### Initial Steps
+- **Inspect the Data First**: Preview a few rows to understand structure and contents
+- **Excel Files**: Always check for multiple sheets; never assume structure based on first sheet alone
 
-- **Excel Files – Multiple Sheets:**  
-  Always check for multiple sheets in Excel files. Never assume the structure is based on the first sheet alone.
+### Technical Considerations
+- **Chart Handling**: Matplotlib runs in headless mode—save charts instead of displaying them
+- **Directory Creation**: You are permitted to create directories as needed
 
-- **File Saving Rules:**  
-  - Saving files is allowed **only** via authorized import methods.  
-  - If file writing is **not allowed**, clearly state the limitation and stop processing.  
-  - If saving to an **existing filename**, append a timestamp to create a new filename, retry, and notify about the change.
-
-- **Chart Handling – Headless Mode:**  
-  Matplotlib is running in headless mode, so do **not** attempt to display charts. Generate and save them instead if required.
-
-- **Missing or Inadequate Data:**  
-  If no suitable data is found for the task, clearly state the issue and stop the analysis.
+### Error Handling
+- **Missing/Inadequate Data**: Clearly state the issue and terminate analysis if suitable data cannot be found
 """.strip()
 
 EXTRA_INSTRUCTIONS_WITH_SOURCE_FILES = f"""
@@ -37,8 +31,8 @@ $files
 """.strip()
 
 
-class Prompt:
-    def __init__(self, task: str, files: List[str] = []):
+class SmolanalystPrompt:
+    def __init__(self, task: str, files: list[str] = []):
         self.task = task
         self.files = files
 

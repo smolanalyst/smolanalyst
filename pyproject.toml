@@ -1,14 +1,44 @@
 [project]
 name = "smolanalyst"
 version = "0.1.0"
-description = "Add your description here"
+description = "A smol AI data analyst running in the CLI"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = [
-    "argparse>=1.4.0",
-    "matplotlib>=3.10.1",
-    "openpyxl>=3.1.5",
-    "pandas>=2.2.3",
-    "platformdirs>=4.3.7",
-    "smolagents[litellm]>=1.13.0",
+
+authors = [
+  { name = "Pierre Mallinjoud", email = "pierre.mallinjoud@gmail.com" },
 ]
+maintainers = [
+  { name = "Pierre Mallinjoud", email = "pierre.mallinjoud@gmail.com" },
+]
+
+license = { text = "MIT" }
+
+dependencies = [
+  "platformdirs>=4.3.7",
+  "smolagents[litellm]>=1.14.0",
+]
+
+keywords = ["AI", "CLI", "data-analysis", "agent"]
+
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Intended Audience :: Developers",
+  "Topic :: Scientific/Engineering :: Information Analysis",
+]
+
+[project.urls]
+Repository = "https://github.com/smolanalyst/smolanalyst"
+
+[project.scripts]
+smolanalyst = "smolanalyst.cli:main"
+
+[tool.setuptools]
+packages = ["smolanalyst"]
+include-package-data = true
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
