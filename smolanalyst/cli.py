@@ -11,28 +11,40 @@ container management, and task execution.
 import os
 import json
 import shutil
-import argparse
 import tempfile
 import datetime
 import subprocess
 from pathlib import Path
-from typing import TypedDict
+from typing import TypedDict, List, Optional
 
 # Third-party imports
+import typer
 import platformdirs
+from rich.console import Console
 
 # Internal imports
-from smolanalyst.config import WORK_DIR, SOURCE_FILES_DIR
+from smolanalyst.constants import (
+    APP_NAME,
+    ENV_NAME,
+    ENV_VERSION,
+    WORK_DIR,
+    SOURCE_FILES_DIR,
+)
 
 # Application constants
-APP_NAME = "smolanalyst"
-ENV_NAME = "smolanalyst"
-ENV_VERSION = "0.1.0"
 IMAGE_NAME = f"{ENV_NAME}:{ENV_VERSION}"
 
 # Configuration paths
-CONFIG_DIR = platformdirs.user_config_dir(APP_NAME)
-CONFIG_FILE = os.path.join(CONFIG_DIR, "config.json")
+CONFIG_DIR = Path(platformdirs.user_config_dir(APP_NAME))
+CONFIG_FILE = CONFIG_DIR / "config.json"
+
+# Rich console for prettier output
+console = Console()
+
+# Create typer app and subcommands
+app = typer.Typer(help="AI agent for data analysis")
+conf_app = typer.Typer(help="Configuration management")
+app.add_typer(conf_app, name="conf")
 
 
 class ModelConfig(TypedDict):
@@ -44,59 +56,6 @@ class ModelConfig(TypedDict):
     api_base: str  # Base URL for API requests
 
 
-def parse_arguments() -> argparse.Namespace:
-    """
-    Parse command line arguments.
-
-    Returns:
-        argparse.Namespace: Parsed command line arguments.
-    """
-    parser = argparse.ArgumentParser(description="AI agent for data analysis.")
-
-    # Create subparsers for main commands
-    subparsers1 = parser.add_subparsers(dest="command", help="Command to execute")
-    subparsers1.required = True  # Require a command to be specified
-
-    # Configuration commands
-    subparsers1.add_parser("init", help="Initialize configuration").set_defaults(
-        func=conf_set
-    )
-    subparsers1.add_parser("configure", help="Configure the application").set_defaults(
-        func=conf_set
-    )
-
-    # Configuration subcommands
-    conf = subparsers1.add_parser("conf", help="Configuration management")
-    subparsers2 = conf.add_subparsers(
-        dest="subcommand", help="Configuration subcommand"
-    )
-    subparsers2.required = True  # Require a subcommand to be specified
-
-    subparsers2.add_parser("set", help="Set configuration values").set_defaults(
-        func=conf_set
-    )
-    subparsers2.add_parser("show", help="Show current configuration").set_defaults(
-        func=conf_show
-    )
-    subparsers2.add_parser("delete", help="Delete configuration").set_defaults(
-        func=conf_delete
-    )
-
-    # Build command
-    build_parser = subparsers1.add_parser("build", help="Build the container image")
-    build_parser.set_defaults(func=build)
-
-    # Run command
-    run_parser = subparsers1.add_parser("run", help="Run a data analysis task")
-    run_parser.add_argument(
-        "files", nargs="*", help="One or more data files to analyze"
-    )
-    run_parser.add_argument("-t", "--task", help="Task description to perform")
-    run_parser.set_defaults(func=run)
-
-    return parser.parse_args()
-
-
 def read_config() -> ModelConfig:
     """
     Read and parse the configuration file.
@@ -106,8 +65,9 @@ def read_config() -> ModelConfig:
 
     Raises:
         FileNotFoundError: If the configuration file doesn't exist.
+        json.JSONDecodeError: If the configuration file is invalid JSON.
     """
-    if not os.path.exists(CONFIG_FILE):
+    if not CONFIG_FILE.exists():
         raise FileNotFoundError(f"Configuration file not found ({CONFIG_FILE})")
 
     with open(CONFIG_FILE, "r") as f:
@@ -121,129 +81,138 @@ def read_config() -> ModelConfig:
     )
 
 
-def conf_set(_) -> None:
-    """
-    Set configuration values interactively and save to config file.
+@app.command("init")
+@app.command("configure")
+def configure() -> None:
+    """Initialize or update configuration interactively."""
+    conf_set()
 
-    Args:
-        _: Unused arguments parameter.
-    """
-    print(f"Writing {APP_NAME} configuration file: {CONFIG_FILE}")
+
+@conf_app.command("set")
+def conf_set() -> None:
+    """Set configuration values interactively and save to config file."""
+    console.print(f"Writing {APP_NAME} configuration file: {CONFIG_FILE}")
 
     # Collect configuration values from user
     config = {}
-    config["type"] = input("Model type (hfapi|litellm)\n> ")
-    config["model_id"] = input("Model ID:\n> ")
-    config["api_key"] = input("Model API key:\n> ")
-    config["api_base"] = input("Model API base URL:\n> ")
+    config["type"] = typer.prompt("Model type (hfapi|litellm)")
+    config["model_id"] = typer.prompt("Model ID")
+    config["api_key"] = typer.prompt("Model API key", hide_input=True)
+    config["api_base"] = typer.prompt("Model API base URL")
 
     # Create config directory if it doesn't exist
-    os.makedirs(CONFIG_DIR, exist_ok=True)
+    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
 
     # Write configuration to file
     try:
         with open(CONFIG_FILE, "w") as f:
             json.dump(config, f, indent=4)
-            print(f"\nConfiguration file saved successfully.")
+        console.print("\n[green]Configuration file saved successfully.[/green]")
     except Exception as e:
-        print(f"Error saving configuration file: {e}")
+        console.print(f"[red]Error saving configuration file: {e}[/red]")
 
 
-def conf_show(_) -> None:
-    """
-    Display the current configuration.
-
-    Args:
-        _: Unused arguments parameter.
-    """
-    print(f"Reading {APP_NAME} configuration file: {CONFIG_FILE}")
+@conf_app.command("show")
+def conf_show() -> None:
+    """Display the current configuration."""
+    console.print(f"Reading {APP_NAME} configuration file: {CONFIG_FILE}")
 
     try:
         config = read_config()
-        print(json.dumps(config, indent=4))
+        # Hide API key in display
+        display_config = {**config}
+        if display_config.get("api_key"):
+            display_config["api_key"] = "********"
+        console.print_json(json.dumps(display_config))
     except FileNotFoundError:
-        print("Configuration file not found.")
+        console.print("[yellow]Configuration file not found.[/yellow]")
+    except json.JSONDecodeError:
+        console.print("[red]Invalid configuration file format.[/red]")
     except Exception as e:
-        print(f"Error reading configuration file: {e}")
+        console.print(f"[red]Error reading configuration file: {e}[/red]")
 
 
-def conf_delete(_) -> None:
-    """
-    Delete the configuration file.
-
-    Args:
-        _: Unused arguments parameter.
-    """
-    print(f"Deleting {APP_NAME} configuration file: {CONFIG_FILE}")
+@conf_app.command("delete")
+def conf_delete() -> None:
+    """Delete the configuration file."""
+    console.print(f"Deleting {APP_NAME} configuration file: {CONFIG_FILE}")
 
     try:
         os.remove(CONFIG_FILE)
-        print(f"Configuration file deleted successfully.")
+        console.print("[green]Configuration file deleted successfully.[/green]")
     except FileNotFoundError:
-        print("Configuration file not found.")
+        console.print("[yellow]Configuration file not found.[/yellow]")
     except Exception as e:
-        print(f"Error deleting configuration file: {e}")
+        console.print(f"[red]Error deleting configuration file: {e}[/red]")
 
 
-def build(_) -> None:
-    """
-    Build the container image using Podman.
-
-    Args:
-        _: Unused arguments parameter.
-    """
+@app.command("build")
+def build() -> None:
+    """Build the container image using Podman."""
     # Get the directory containing this script
     build_path = Path(__file__).parent.resolve()
 
-    print(f"Building container image: {IMAGE_NAME}")
+    console.print(f"Building container image: {IMAGE_NAME}")
     try:
         subprocess.run(["podman", "build", "-t", IMAGE_NAME, build_path], check=True)
-        print("Container image built successfully.")
+        console.print("[green]Container image built successfully.[/green]")
     except subprocess.CalledProcessError as e:
-        print(f"Error building container image: {e}")
+        console.print(f"[red]Error building container image: {e}[/red]")
     except FileNotFoundError:
-        print("Error: Podman not found. Please install Podman to build the container.")
+        console.print(
+            "[red]Error: Podman not found. Please install Podman to build the container.[/red]"
+        )
 
 
-def run(args) -> None:
-    """
-    Run a data analysis task in a container.
-
-    Args:
-        args: Command line arguments containing task and files.
-    """
+@app.command("run")
+def run(
+    files: List[Path] = typer.Argument(None, help="One or more data files to analyze"),
+    task: Optional[str] = typer.Option(
+        None, "--task", "-t", help="Task description to perform"
+    ),
+) -> None:
+    """Run a data analysis task in a container."""
     # Read the configuration file
     try:
         config = read_config()
     except FileNotFoundError:
-        print("Configuration file not found. Please run 'configure' first.")
+        console.print(
+            "[yellow]Configuration file not found. Please run 'configure' first.[/yellow]"
+        )
+        return
+    except json.JSONDecodeError:
+        console.print(
+            "[red]Invalid configuration file format. Please run 'configure' again.[/red]"
+        )
         return
     except Exception as e:
-        print(f"Error reading configuration file: {e}")
+        console.print(f"[red]Error reading configuration file: {e}[/red]")
         return
 
     # Prepare volume mappings for data files
     volumes = []
     try:
-        for file in set(args.files):
-            if os.path.exists(file):
-                absolute_path = os.path.abspath(file)
-                file_dest_path = f"{SOURCE_FILES_DIR}/{os.path.basename(file)}"
+        for file_path in files:
+            if file_path.exists():
+                absolute_path = str(file_path.absolute())
+                file_dest_path = f"{SOURCE_FILES_DIR}/{file_path.name}"
                 volumes.append((absolute_path, file_dest_path))
             else:
-                print(f"Warning: File {file} not found. Skipping.")
+                console.print(
+                    f"[yellow]Warning: File {file_path} not found. Skipping.[/yellow]"
+                )
     except Exception as e:
-        print(f"Error processing input files: {e}")
+        console.print(f"[red]Error processing input files: {e}[/red]")
         return
 
-    if not volumes and args.files:
-        print("No valid input files found.")
+    if not volumes and files:
+        console.print("[yellow]No valid input files found.[/yellow]")
         return
 
     # Get the task from arguments or prompt user
-    task = args.task
-    if not task:
-        task = input("What analysis would you like to perform?\n> ")
+    task_desc = task
+    if not task_desc:
+        task_desc = typer.prompt("What analysis would you like to perform?")
 
     # Run the command with a temporary directory for outputs
     try:
@@ -269,20 +238,23 @@ def run(args) -> None:
 
             # Add image name and task
             cmd.append(IMAGE_NAME)
-            cmd.append(task)
+            cmd.append(task_desc)
 
             # Run the container
+            console.print("[blue]Starting analysis...[/blue]")
             subprocess.run(cmd)
 
             # Copy generated files to current directory
             copy_files_to_cwd(tmp_dir)
 
     except subprocess.CalledProcessError as e:
-        print(f"Error running container: {e}")
+        console.print(f"[red]Error running container: {e}[/red]")
     except FileNotFoundError:
-        print("Error: Podman not found. Please install Podman to run the container.")
+        console.print(
+            "[red]Error: Podman not found. Please install Podman to run the container.[/red]"
+        )
     except Exception as e:
-        print(f"Unexpected error: {e}")
+        console.print(f"[red]Unexpected error: {e}[/red]")
 
 
 def copy_files_to_cwd(source_dir: str) -> None:
@@ -294,70 +266,41 @@ def copy_files_to_cwd(source_dir: str) -> None:
     Args:
         source_dir (str): Path to the source directory
     """
-    cwd = os.getcwd()
-    source_dir = os.path.abspath(source_dir)
-    copied_files = False
+    source_path = Path(source_dir)
+    cwd = Path.cwd()
 
-    # Walk through the source directory
-    for root, _, files in os.walk(source_dir):
-        # Calculate the relative path from the source directory
-        rel_path = os.path.relpath(root, source_dir)
-
-        # Skip if no files in this directory
-        if not files:
+    # Walk through all files recursively with pathlib
+    for source_file in source_path.glob("**/*"):
+        # Skip directories, only process files
+        if not source_file.is_file():
             continue
 
-        # Create the same directory structure in the destination
-        if rel_path != ".":
-            dest_dir = os.path.join(cwd, rel_path)
-            os.makedirs(dest_dir, exist_ok=True)
-        else:
-            dest_dir = cwd
+        # Get relative path from source directory
+        rel_path = source_file.relative_to(source_path)
+        dest_file = cwd / rel_path
 
-        # Copy each file
-        for file in files:
-            source_file = os.path.join(root, file)
+        # Create parent directories if needed
+        dest_file.parent.mkdir(parents=True, exist_ok=True)
 
-            # Determine destination file path
-            if rel_path == ".":
-                dest_file = os.path.join(cwd, file)
-            else:
-                dest_file = os.path.join(cwd, rel_path, file)
+        # If file exists, append timestamp to the filename
+        if dest_file.exists():
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            dest_file = dest_file.with_name(
+                f"{dest_file.stem}_{timestamp}{dest_file.suffix}"
+            )
 
-            # If file exists, append timestamp to the filename
-            if os.path.exists(dest_file):
-                # Get current timestamp
-                timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-
-                # Split the filename and extension
-                filename, file_extension = os.path.splitext(file)
-
-                # Create new filename with timestamp
-                new_filename = f"{filename}_{timestamp}{file_extension}"
-
-                # Update the destination file path
-                if rel_path == ".":
-                    dest_file = os.path.join(cwd, new_filename)
-                else:
-                    dest_file = os.path.join(cwd, rel_path, new_filename)
-
-            # Copy the file
-            shutil.copy2(source_file, dest_file)
-            print(f"Created: {os.path.relpath(dest_file, cwd)}")
-            copied_files = True
-
-    if not copied_files:
-        print("No output files were generated by the analysis.")
+        # Copy the file
+        shutil.copy2(source_file, dest_file)
+        print(f"Created: {dest_file.relative_to(cwd)}")
 
 
-def main():
+def main() -> None:
     try:
-        args = parse_arguments()
-        args.func(args)
+        app()
     except KeyboardInterrupt:
-        print("\nOperation cancelled by user.")
+        console.print("\n[yellow]Operation cancelled by user.[/yellow]")
     except Exception as e:
-        print(f"Error: {e}")
+        console.print(f"[red]Error: {e}[/red]")
 
 
 if __name__ == "__main__":

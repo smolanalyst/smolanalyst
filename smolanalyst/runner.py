@@ -10,22 +10,16 @@ the bridge between the CLI interface and the actual analysis execution.
 
 import os
 import sys
-from typing import List, Optional
+from typing import List, Optional, Union
+from pathlib import Path
 
-# Internal imports
-from config import SOURCE_FILES_DIR
-from prompt import SmolanalystPrompt
+# Third-party imports
 from smolagents import CodeAgent, LogLevel, HfApiModel, LiteLLMModel
 
-# Allowed imports for the agent's execution environment
-ADDITIONAL_AUTHORIZED_IMPORTS = [
-    "os",
-    "posixpath",
-    "numpy",
-    "pandas",
-    "matplotlib",
-    "matplotlib.pyplot",
-]
+# Internal imports
+# The script runs inside the image so it must not be prepended with the package name
+from prompt import SmolanalystPrompt
+from constants import SOURCE_FILES_DIR, ADDITIONAL_AUTHORIZED_IMPORTS
 
 # Environment variables for model configuration
 MODEL_ID = os.getenv("MODEL_ID")
@@ -33,33 +27,37 @@ MODEL_TYPE = os.getenv("MODEL_TYPE")
 MODEL_API_KEY = os.getenv("MODEL_API_KEY")
 MODEL_API_BASE = os.getenv("MODEL_API_BASE")
 
+# Type alias for model types
+ModelType = Union[HfApiModel, LiteLLMModel]
 
-def _build_model() -> Optional[HfApiModel | LiteLLMModel]:
+
+def _build_model() -> Optional[ModelType]:
     """
     Internal function to create an appropriate model instance based on environment variables.
 
     Returns:
-        HfApiModel or LiteLLMModel or None: The initialized model instance or None if configuration is invalid.
+        Optional[ModelType]: The initialized model instance or None if configuration is invalid.
     """
-    match MODEL_TYPE:
-        case "hfapi":
-            return HfApiModel(model_id=MODEL_ID, token=MODEL_API_KEY)
-        case "litellm":
-            return LiteLLMModel(
-                model_id=MODEL_ID,
-                api_key=MODEL_API_KEY,
-                api_base=MODEL_API_BASE,
-            )
-        case _:
-            return None
+    if not MODEL_TYPE or not MODEL_ID:
+        return None
+
+    if MODEL_TYPE == "hfapi":
+        return HfApiModel(model_id=MODEL_ID, token=MODEL_API_KEY)
+    elif MODEL_TYPE == "litellm":
+        return LiteLLMModel(
+            model_id=MODEL_ID,
+            api_key=MODEL_API_KEY,
+            api_base=MODEL_API_BASE,
+        )
+    return None
 
 
-def build_model() -> HfApiModel | LiteLLMModel:
+def build_model() -> ModelType:
     """
     Create and validate a model instance based on environment configuration.
 
     Returns:
-        The initialized model instance.
+        ModelType: The initialized model instance.
 
     Raises:
         ValueError: If the model cannot be initialized with the given configuration.
@@ -90,12 +88,16 @@ def list_source_files(directory: str) -> List[str]:
         List[str]: List of absolute paths to all files found.
     """
     file_list = []
+    dir_path = Path(directory)
+
+    if not dir_path.exists():
+        return []
+
     try:
-        for root, _, files in os.walk(directory):
-            for file in files:
-                abspath = os.path.abspath(os.path.join(root, file))
-                file_list.append(abspath)
-    except FileNotFoundError:
+        for path in dir_path.rglob("*"):
+            if path.is_file():
+                file_list.append(str(path.absolute()))
+    except Exception:
         return []
 
     return file_list

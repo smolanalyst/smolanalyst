@@ -11,7 +11,7 @@ RUN mkdir /smolanalyst
 
 WORKDIR /smolanalyst
 
-COPY config.py /app/config.py
+COPY constants.py /app/constants.py
 COPY prompt.py /app/prompt.py
 COPY runner.py /app/runner.py
 
