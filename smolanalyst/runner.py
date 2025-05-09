@@ -10,6 +10,7 @@ the bridge between the CLI interface and the actual analysis execution.
 
 import os
 import sys
+import stat
 from typing import List, Optional, Union
 from pathlib import Path
 
@@ -19,7 +20,8 @@ from smolagents import CodeAgent, LogLevel, HfApiModel, LiteLLMModel
 # Internal imports
 # The script runs inside the image so it must not be prepended with the package name
 from prompt import SmolanalystPrompt
-from constants import SOURCE_FILES_DIR, ADDITIONAL_AUTHORIZED_IMPORTS
+from filesystem import set_full_permissions
+from constants import WORK_DIR, SOURCE_FILES_DIR, ADDITIONAL_AUTHORIZED_IMPORTS
 
 # Environment variables for model configuration
 MODEL_ID = os.getenv("MODEL_ID")
@@ -135,6 +137,9 @@ def run(task: str) -> None:
     # Run the initial task
     agent.run(str(prompt))
 
+    # Set permissions on output files
+    set_full_permissions(WORK_DIR)
+
     # Handle user followup queries
     while True:
         more = input("\nIs this ok? (Enter followup question or 'q' to quit)\n> ")
@@ -143,6 +148,9 @@ def run(task: str) -> None:
             break
 
         agent.run(more, reset=False)
+
+        # Set permissions after each run
+        set_full_permissions(WORK_DIR)
 
 
 if __name__ == "__main__":

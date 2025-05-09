@@ -7,7 +7,7 @@ SmolAnalyst Constants - Central location for application constants.
 # Application constants
 APP_NAME = "smolanalyst"
 ENV_NAME = "smolanalyst"
-ENV_VERSION = "0.1.0"
+ENV_VERSION = "0.1.1"
 
 # Container directories
 WORK_DIR = "/smolanalyst"

@@ -4,7 +4,7 @@ SmolAnalyst is an AI agent that analyzes data files by generating and executing 
 
 ## What is SmolAnalyst?
 
-SmolAnalyst is a tool that allows you to analyze data using natural language instructions. It uses Hugging Face's Smolagent to generate Python code that processes your data files within a secure, containerized environment. For security and isolation, SmolAnalyst relies on [Podman](https://podman.io/) to run all analysis tasks inside containers—so you’ll need to have Podman installed on your system. Smolanalyst handles the execution environment, file management, and security aspects so you can focus on your analysis tasks.
+SmolAnalyst is a tool that allows you to analyze data using natural language instructions. It uses Hugging Face's Smolagent to generate Python code that processes your data files within a secure, containerized environment. For security and isolation, SmolAnalyst relies on container technology to run all analysis tasks inside containers—so you'll need to have either [Podman](https://podman.io/) or [Docker](https://www.docker.com/) installed on your system. Smolanalyst handles the execution environment, file management, and security aspects so you can focus on your analysis tasks.
 
 ## Installation
 
@@ -36,7 +36,7 @@ SmolAnalyst follows a secure and efficient workflow for data analysis:
    smolanalyst configure
    ```
 
-2. **Build**: Build the container image with Podman (required once after installing a new version)
+2. **Build**: Build the container image (required once after installing a new version)
 
    ```bash
    smolanalyst build
@@ -51,7 +51,7 @@ SmolAnalyst follows a secure and efficient workflow for data analysis:
 
 When you run an analysis with SmolAnalyst, the following happens:
 
-1. Your source files are mounted as read-only in a Podman container
+1. Your source files are mounted as read-only in a container
 2. A temporary directory is mounted as writable for output files
 3. The container runs a Smolagent session with special instructions about your files
 4. The AI agent generates and executes Python code to analyze your data
@@ -66,9 +66,23 @@ This containerized approach ensures that:
 - The execution environment is isolated from your system for security
 - All generated files are properly managed and accessible after analysis
 
-## CLI Configuration
+## Container Support
 
-To configure SmolAnalyst, run the following command:
+SmolAnalyst uses containerization to provide a secure, isolated environment for data analysis. It supports both Podman and Docker:
+
+- **Podman**: Runs containers in rootless mode, providing enhanced security
+- **Docker**: Widely available and familiar to many users
+
+The CLI auto-detects which container engine is installed on your system. If both are available, it prefers Podman for its enhanced security features. You can also explicitly specify which engine to use with the `--engine` option:
+
+```bash
+smolanalyst build --engine docker
+smolanalyst run data.csv --task "analyze this dataset" --engine docker
+```
+
+## CLI Usage
+
+### Configure the LLM
 
 ```bash
 smolanalyst configure
@@ -82,6 +96,27 @@ This command will prompt you to provide the following:
 - `model base`: The base URL of the model API (used for local deployments like [Ollama](https://ollama.com/)).
 
 After completing the prompts, a `config.json` file will be saved to your home directory with the configuration details.
+
+### Build the container image
+
+```bash
+smolanalyst build [--engine CONTAINER_ENGINE]
+```
+
+Options:
+
+- `--engine` or `-e`: Container engine to use ("podman" or "docker", auto-detected if not specified)
+
+### Run an analysis
+
+```bash
+smolanalyst run [FILES] [--task TASK] [--engine CONTAINER_ENGINE]
+```
+
+Options:
+
+- `--task` or `-t`: Description of the analysis task to perform
+- `--engine` or `-e`: Container engine to use ("podman" or "docker", auto-detected if not specified)
 
 ### Example Configurations
 
@@ -158,11 +193,10 @@ This command will:
 
 ## Technical Details
 
-SmolAnalyst uses Podman for containerization instead of Docker. This provides several advantages:
+SmolAnalyst uses containerization for security and isolation. You can choose between:
 
-- Rootless containers for enhanced security
-- Reduced attack surface
-- Compatible with systems where Docker isn't available or preferred
+- **Podman**: Provides rootless containers for enhanced security and reduced attack surface
+- **Docker**: Widely available and familiar to many users
 
 The container includes a Python environment with essential data analysis libraries. When you run an analysis, your files are mounted in this container, and the AI agent generates and executes Python code to process your data.
 
@@ -204,7 +238,7 @@ SmolAnalyst is licensed under the MIT License. See [LICENSE.md](LICENSE.md) for 
 SmolAnalyst is built on top of several amazing open-source projects:
 
 - [Hugging Face Smolagents](https://github.com/huggingface/smolagents) for the AI agent framework
-- [Podman](https://podman.io/) for containerization
+- [Podman](https://podman.io/) and [Docker](https://www.docker.com/) for containerization
 - [Pandas](https://pandas.pydata.org/) and [Matplotlib](https://matplotlib.org/) for data analysis and visualization
 
 We're grateful to the maintainers of these projects for their incredible work.
